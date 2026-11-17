@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (3 Cycles) with GUI
+-- INTEL TEST - Auto Farm (Map Specific Safe Zones)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -9,9 +9,29 @@ local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- ==========================================
--- НАСТРОЙКИ
+-- ТАБЛИЦА СЕЙФ-ЗОН
 -- ==========================================
-local SAFE_ZONE_POS = Vector3.new(-145.08, 910.79, 20.61) -- Твоя сейф-зона
+local SAFE_ZONES = {
+    -- Doublecross (День и Ночь)
+    ["ctf_doublecrossday"] = Vector3.new(-145.08, 910.79, 20.61),
+    ["ctf_doublecross"] = Vector3.new(-145.08, 910.79, 20.61), -- Ночная версия
+    
+    -- 2Fort (Обычный, Ночь, Разрушенный)
+    ["ctf_2fort"] = Vector3.new(91.76, 60.05, 36.07),
+    ["ctf_2fortnight"] = Vector3.new(91.76, 60.05, 36.07),
+    ["ctf_wartorn2fort"] = Vector3.new(91.76, 60.05, 36.07),
+}
+
+-- Функция определения текущей карты
+local function getCurrentMapName()
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        local name = obj.Name:lower()
+        if name:find("ctf_") or name:find("pl_") or name:find("cp_") or name:find("koth_") then
+            return obj.Name 
+        end
+    end
+    return "unknown"
+end
 
 local function teleportTo(pos)
     local char = LocalPlayer.Character
@@ -47,12 +67,20 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1) -- Ждем 1 секунду для регистрации сдачи
+    task.wait(1) -- Ждем регистрации сдачи
     
     -- 3. ТП в безопасную зону
-    teleportTo(SAFE_ZONE_POS)
-    task.wait(0.5)
+    local currentMap = getCurrentMapName()
+    local safePos = SAFE_ZONES[currentMap]
     
+    if safePos then
+        teleportTo(safePos)
+    else
+        teleportTo(Vector3.new(0, 50, 0)) 
+        Rayfield:Notify({ Title = "Warning", Content = "No safe zone for map: " .. currentMap, Duration = 3 })
+    end
+    
+    task.wait(0.5)
     return true
 end
 
@@ -74,25 +102,25 @@ MainTab:CreateButton({
     Callback = function()
         task.spawn(function()
             local successCount = 0
+            local currentMap = getCurrentMapName()
+            
+            Rayfield:Notify({ Title = "Map Detected", Content = currentMap, Duration = 3 })
+
             for i = 1, 3 do
                 Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
                 
-                -- Ждем, пока появится синий кейс
                 while not getBriefcase("Blue") do
                     task.wait(0.5)
                 end
                 
                 local success = doOneCycle()
-                if success then
-                    successCount = successCount + 1
-                end
+                if success then successCount = successCount + 1 end
                 
                 task.wait(1)
             end
-            
             Rayfield:Notify({ Title = "Auto Farm", Content = "Finished " .. successCount .. "/3 cycles!", Duration = 3 })
         end)
     end,
 })
 
-print("[+] INTEL TEST (Safe Zone added) Loaded.")
+print("[+] INTEL TEST Loaded. All CTF maps are supported.")
