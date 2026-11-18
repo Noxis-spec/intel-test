@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (3 Cycles) with GUI
+-- INTEL TEST - Auto Farm (Safe Zone + Floor + Re-TP)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -11,7 +11,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 -- ==========================================
 -- НАСТРОЙКИ
 -- ==========================================
-local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69) -- Твоя сейф-зона
+local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
 local platform = nil
 
 -- Создаем невидимый пол
@@ -20,10 +20,10 @@ local function createFloor()
     platform = Instance.new("Part")
     platform.Name = "SafeZoneFloor"
     platform.Size = Vector3.new(20, 1, 20) 
-    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Пол ровно под ногами
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0)
     platform.Anchored = true
     platform.CanCollide = true
-    platform.Transparency = 1 -- Невидимый
+    platform.Transparency = 1
     platform.Parent = Workspace
 end
 
@@ -46,6 +46,20 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
+-- Проверка и удержание в сейф-зоне
+local function ensureInSafeZone()
+    task.wait(2) -- Ждем 2 секунды
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local currentPos = char.HumanoidRootPart.Position
+        -- Если мы улетели от сейф-зоны дальше чем на 50 юнитов, возвращаем
+        if (currentPos - SAFE_ZONE_POS).Magnitude > 50 then
+            teleportTo(SAFE_ZONE_POS)
+            Rayfield:Notify({ Title = "Safe Zone", Content = "Returned to Safe Zone", Duration = 2 })
+        end
+    end
+end
+
 -- Функция одного цикла
 local function doOneCycle()
     local blueIntel = getBriefcase("Blue")
@@ -61,11 +75,14 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1) -- Ждем 1 секунду для регистрации сдачи
+    task.wait(1)
     
     -- 3. ТП в безопасную зону
     teleportTo(SAFE_ZONE_POS)
     task.wait(0.5)
+    
+    -- 4. Проверка через 2 секунды (если улетели - вернуть)
+    ensureInSafeZone()
     
     return true
 end
@@ -87,7 +104,7 @@ MainTab:CreateButton({
     Name = "Start Auto Farm (3 Cycles)",
     Callback = function()
         task.spawn(function()
-            createFloor() -- Создаем пол перед стартом цикла
+            createFloor() -- Создаем пол перед стартом
             
             local successCount = 0
             for i = 1, 3 do
@@ -111,4 +128,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST (Safe Zone + Floor) Loaded.")
+print("[+] INTEL TEST (Safe Zone + Floor + Re-TP) Loaded.")
