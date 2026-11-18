@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Simple Button (No Library)
+-- INTEL TEST - Simple Button (Wait for Blue)
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -8,9 +8,6 @@ local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
 
--- ==========================================
--- НАСТРОЙКИ
--- ==========================================
 local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
 local platform = nil
 
@@ -50,16 +47,20 @@ local function doOneCycle()
     local redIntel = getBriefcase("Red")
     if not blueIntel or not redIntel then return false end
 
+    -- 1. ТП к синему
     teleportTo(blueIntel.Position + Vector3.new(0, 5, 0))
-    task.wait(0.6)
+    task.wait(0.8)
     pressE()
-    task.wait(0.4)
+    task.wait(0.8)
     
+    -- 2. ТП к красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
+    task.wait(1.5)
+    
+    -- 3. ТП в сейф-зону
+    teleportTo(SAFE_ZONE_POS)
     task.wait(1)
     
-    teleportTo(SAFE_ZONE_POS)
-    task.wait(0.5)
     return true
 end
 
@@ -92,12 +93,19 @@ Button.MouseButton1Click:Connect(function()
         local successCount = 0
         
         for i = 1, 3 do
+            -- ЖЕСТКАЯ ПРОВЕРКА: Ждем, пока на карте появится СИНИЙ кейс
             while not getBriefcase("Blue") do
+                -- Пока синего нет, просто держим игрока в сейф-зоне
+                if i > 1 then
+                    teleportTo(SAFE_ZONE_POS)
+                end
                 task.wait(0.5)
             end
             
+            -- Если синий появился, запускаем цикл
             local success = doOneCycle()
             if success then successCount = successCount + 1 end
+            
             task.wait(1)
         end
         
@@ -106,4 +114,4 @@ Button.MouseButton1Click:Connect(function()
     end)
 end)
 
-print("[+] INTEL TEST (Simple Button) Loaded.")
+print("[+] INTEL TEST (Wait for Blue) Loaded.")
