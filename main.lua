@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (Safe Zone + Floor)
+-- INTEL TEST - Auto Farm (Wait for Blue Spawn)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -20,10 +20,10 @@ local function createFloor()
     platform = Instance.new("Part")
     platform.Name = "SafeZoneFloor"
     platform.Size = Vector3.new(20, 1, 20) 
-    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Пол ровно под ногами
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0)
     platform.Anchored = true
     platform.CanCollide = true
-    platform.Transparency = 1 -- Невидимый
+    platform.Transparency = 1
     platform.Parent = Workspace
 end
 
@@ -46,12 +46,24 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
--- Функция одного цикла
+-- ==========================================
+-- ФУНКЦИЯ ОДНОГО ЦИКЛА
+-- ==========================================
 local function doOneCycle()
+    -- Жесткая проверка: ждем, пока синий кейс появится на карте
+    while not getBriefcase("Blue") do
+        task.wait(0.5)
+    end
+    
+    -- Как только синий появился, берем координаты обоих
     local blueIntel = getBriefcase("Blue")
     local redIntel = getBriefcase("Red")
     
-    if not blueIntel or not redIntel then return false end
+    -- Если красного почему-то нет (баг игры), ждем
+    while not redIntel do
+        task.wait(0.5)
+        redIntel = getBriefcase("Red")
+    end
 
     -- 1. ТП к Синему
     teleportTo(blueIntel.Position + Vector3.new(0, 5, 0))
@@ -61,11 +73,11 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1)
+    task.wait(1.5) -- Даем время на сдачу
     
     -- 3. ТП в сейф-зону
     teleportTo(SAFE_ZONE_POS)
-    task.wait(0.5)
+    task.wait(1) 
     
     return true
 end
@@ -91,12 +103,9 @@ MainTab:CreateButton({
             local successCount = 0
             
             for i = 1, 3 do
-                Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
+                Rayfield:Notify({ Title = "Auto Farm", Content = "Waiting for Blue Intel (" .. i .. "/3)...", Duration = 2 })
                 
-                while not getBriefcase("Blue") do
-                    task.wait(0.5)
-                end
-                
+                -- Запускаем цикл (он сам будет ждать появления синего)
                 local success = doOneCycle()
                 if success then successCount = successCount + 1 end
                 
@@ -107,4 +116,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST Loaded (Safe Zone + Invisible Floor).")
+print("[+] INTEL TEST Loaded (Wait for Blue Spawn).")
