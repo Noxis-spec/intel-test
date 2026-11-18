@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (Smart Map Detection)
+-- INTEL TEST - Auto Farm (Safe Platform + Noclip)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -7,33 +7,27 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
 -- ==========================================
--- ТАБЛИЦА СЕЙФ-ЗОН
+-- НАСТРОЙКИ СЕЙФ-ЗОНЫ (Твои координаты)
 -- ==========================================
-local SAFE_ZONES = {
-    -- Doublecross (День и Ночь)
-    ["ctf_doublecrossday"] = Vector3.new(-145.08, 910.79, 20.61),
-    ["ctf_doublecross"] = Vector3.new(-145.08, 910.79, 20.61),
-    
-    -- 2Fort (Обычный, Ночь, Разрушенный)
-    ["ctf_2fort"] = Vector3.new(91.76, 60.05, 36.07),
-    ["ctf_2fortnight"] = Vector3.new(91.76, 60.05, 36.07),
-    ["ctf_wartorn2fort"] = Vector3.new(91.76, 60.05, 36.07),
-}
+local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
+local noclipEnabled = false
+local platform = nil
 
--- ==========================================
--- УМНОЕ ОПРЕДЕЛЕНИЕ КАРТЫ
--- ==========================================
-local function getCurrentMapName()
-    -- Сканируем ВСЁ, что есть в Workspace, чтобы найти название карты
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        local name = obj.Name:lower()
-        if name:find("ctf_") or name:find("pl_") or name:find("cp_") or name:find("koth_") then
-            return obj.Name 
-        end
-    end
-    return "unknown"
+-- Создаем платформу в воздухе (чтобы было на что встать)
+local function createPlatform()
+    if platform and platform.Parent then return end
+    platform = Instance.new("Part")
+    platform.Name = "AutoFarmSafePlatform"
+    platform.Size = Vector3.new(20, 1, 20) -- 20х20 юнитов, чтобы точно не упасть
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Чуть ниже точки ТП
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1 -- Невидимая (или поставь 0, если хочешь видеть)
+    platform.Material = Enum.Material.SmoothPlastic
+    platform.Parent = Workspace
 end
 
 local function teleportTo(pos)
@@ -55,14 +49,34 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
--- Функция одного цикла
+-- ==========================================
+-- ЛОГИКА NOCLIP (Прохождение сквозь стены)
+-- ==========================================
+local function toggleNoclip(state)
+    noclipEnabled = state
+    if state then
+        RunService.Stepped:Connect(function()
+            if noclipEnabled and LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- ==========================================
+-- ФУНКЦИЯ ОДНОГО ЦИКЛА
+-- ==========================================
 local function doOneCycle()
     local blueIntel = getBriefcase("Blue")
     local redIntel = getBriefcase("Red")
     
     if not blueIntel or not redIntel then return false end
 
-    -- 1. ТП к Синему (падаем на него)
+    -- 1. ТП к Синему
     teleportTo(blueIntel.Position + Vector3.new(0, 5, 0))
     task.wait(0.6)
     pressE()
@@ -70,20 +84,13 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1)
+    task.wait(1) -- Ждем сдачи
     
-    -- 3. ТП в безопасную зону
-    local currentMap = getCurrentMapName()
-    local safePos = SAFE_ZONES[currentMap]
-    
-    if safePos then
-        teleportTo(safePos)
-    else
-        teleportTo(Vector3.new(0, 50, 0)) 
-        Rayfield:Notify({ Title = "Warning", Content = "No safe zone for map: " .. currentMap, Duration = 3 })
-    end
-    
+    -- 3. ТП на безопасную платформу
+    createPlatform() -- Создаем платформу (если ее еще нет)
+    teleportTo(SAFE_ZONE_POS)
     task.wait(0.5)
+    
     return true
 end
 
@@ -100,16 +107,25 @@ local Window = Rayfield:CreateWindow({
 
 local MainTab = Window:CreateTab("Main", 4483362458)
 
+MainTab:CreateToggle({
+    Name = "Enable Noclip (Fly through walls)",
+    CurrentValue = false,
+    Flag = "Noclip",
+    Callback = function(state)
+        toggleNoclip(state)
+        if state then
+            Rayfield:Notify({ Title = "Noclip", Content = "Noclip Enabled", Duration = 2 })
+        end
+    end,
+})
+
 MainTab:CreateButton({
     Name = "Start Auto Farm (3 Cycles)",
     Callback = function()
         task.spawn(function()
+            createPlatform() -- Создаем платформу сразу при запуске
             local successCount = 0
-            local currentMap = getCurrentMapName()
             
-            -- Показываем, какую карту нашел скрипт
-            Rayfield:Notify({ Title = "Map Detected", Content = currentMap, Duration = 5 })
-
             for i = 1, 3 do
                 Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
                 
@@ -127,4 +143,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST Loaded. Map detection is now aggressive.")
+print("[+] INTEL TEST Loaded (Safe Platform + Noclip).")
