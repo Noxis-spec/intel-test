@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (Full Fixed Version)
+-- INTEL TEST - Auto Farm (3 Cycles) with GUI
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -11,7 +11,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 -- ==========================================
 -- НАСТРОЙКИ
 -- ==========================================
-local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
+local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69) -- Твоя сейф-зона
 local platform = nil
 
 -- Создаем невидимый пол
@@ -20,10 +20,10 @@ local function createFloor()
     platform = Instance.new("Part")
     platform.Name = "SafeZoneFloor"
     platform.Size = Vector3.new(20, 1, 20) 
-    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0)
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Пол ровно под ногами
     platform.Anchored = true
     platform.CanCollide = true
-    platform.Transparency = 1
+    platform.Transparency = 1 -- Невидимый
     platform.Parent = Workspace
 end
 
@@ -46,35 +46,14 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
--- Проверка удержания в сейф-зоне
-local function ensureInSafeZone()
-    task.wait(2) -- Ждем 2 секунды
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        local currentPos = char.HumanoidRootPart.Position
-        if (currentPos - SAFE_ZONE_POS).Magnitude > 50 then
-            teleportTo(SAFE_ZONE_POS)
-            Rayfield:Notify({ Title = "Safe Zone", Content = "Returned to Safe Zone", Duration = 2 })
-        end
-    end
-end
-
 -- Функция одного цикла
 local function doOneCycle()
-    -- Ждем появления синего кейса
-    while not getBriefcase("Blue") do
-        task.wait(0.5)
-    end
-    
     local blueIntel = getBriefcase("Blue")
     local redIntel = getBriefcase("Red")
     
-    while not redIntel do
-        task.wait(0.5)
-        redIntel = getBriefcase("Red")
-    end
+    if not blueIntel or not redIntel then return false end
 
-    -- 1. ТП к Синему
+    -- 1. ТП к Синему (падаем на него)
     teleportTo(blueIntel.Position + Vector3.new(0, 5, 0))
     task.wait(0.6)
     pressE()
@@ -82,14 +61,11 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1)
+    task.wait(1) -- Ждем 1 секунду для регистрации сдачи
     
-    -- 3. ТП в сейф-зону
+    -- 3. ТП в безопасную зону
     teleportTo(SAFE_ZONE_POS)
     task.wait(0.5)
-    
-    -- 4. Проверка через 2 секунды
-    ensureInSafeZone()
     
     return true
 end
@@ -111,11 +87,16 @@ MainTab:CreateButton({
     Name = "Start Auto Farm (3 Cycles)",
     Callback = function()
         task.spawn(function()
-            createFloor() -- Создаем пол
+            createFloor() -- Создаем пол перед стартом
             
             local successCount = 0
             for i = 1, 3 do
                 Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
+                
+                -- Ждем, пока появится синий кейс
+                while not getBriefcase("Blue") do
+                    task.wait(0.5)
+                end
                 
                 local success = doOneCycle()
                 if success then
@@ -130,4 +111,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST Loaded.")
+print("[+] INTEL TEST (Safe Zone + Floor) Loaded.")
