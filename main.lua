@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Simple Button (Wait for Blue)
+-- INTEL TEST - Simple Button (Timer TP)
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -7,10 +7,18 @@ local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
+-- ==========================================
+-- НАСТРОЙКИ
+-- ==========================================
 local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
+local TP_DELAY = 10 -- Раз в 10 секунд возвращать в сейф (поставь 60, если хочешь минуту)
 local platform = nil
+local isFarming = false
+local lastTPTime = 0
 
+-- Создаем невидимый пол
 local function createFloor()
     if platform and platform.Parent then return end
     platform = Instance.new("Part")
@@ -42,6 +50,9 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
+-- ==========================================
+-- ЛОГИКА ЦИКЛА
+-- ==========================================
 local function doOneCycle()
     local blueIntel = getBriefcase("Blue")
     local redIntel = getBriefcase("Red")
@@ -57,12 +68,25 @@ local function doOneCycle()
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
     task.wait(1.5)
     
-    -- 3. ТП в сейф-зону
+    -- 3. СРАЗУ ТП В СЕЙФ
     teleportTo(SAFE_ZONE_POS)
-    task.wait(1)
-    
+    task.wait(0.5)
     return true
 end
+
+-- ==========================================
+-- ТАЙМЕР (Раз в 10 сек - ТП в сейф)
+-- ==========================================
+RunService.Heartbeat:Connect(function()
+    if isFarming then
+        local currentTime = tick()
+        if currentTime - lastTPTime >= TP_DELAY then
+            -- Время вышло, принудительно тп в сейф
+            teleportTo(SAFE_ZONE_POS)
+            lastTPTime = currentTime
+        end
+    end
+end)
 
 -- ==========================================
 -- ПРОСТОЕ МЕНЮ
@@ -85,33 +109,38 @@ Button.Parent = ScreenGui
 Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
 
 Button.MouseButton1Click:Connect(function()
-    Button.Text = "WORKING..."
-    Button.TextColor3 = Color3.fromRGB(255, 200, 0)
-    
-    task.spawn(function()
-        createFloor()
-        local successCount = 0
-        
-        for i = 1, 3 do
-            -- ЖЕСТКАЯ ПРОВЕРКА: Ждем, пока на карте появится СИНИЙ кейс
-            while not getBriefcase("Blue") do
-                -- Пока синего нет, просто держим игрока в сейф-зоне
-                if i > 1 then
-                    teleportTo(SAFE_ZONE_POS)
-                end
-                task.wait(0.5)
-            end
-            
-            -- Если синий появился, запускаем цикл
-            local success = doOneCycle()
-            if success then successCount = successCount + 1 end
-            
-            task.wait(1)
-        end
-        
+    if isFarming then
+        -- Остановка
+        isFarming = false
         Button.Text = "START FARM"
         Button.TextColor3 = Color3.fromRGB(0, 255, 0)
-    end)
+    else
+        -- Запуск
+        isFarming = true
+        Button.Text = "STOP FARM"
+        Button.TextColor3 = Color3.fromRGB(255, 50, 50)
+        lastTPTime = tick() -- Сбрасываем таймер
+        
+        task.spawn(function()
+            createFloor()
+            local successCount = 0
+            
+            for i = 1, 3 do
+                while not getBriefcase("Blue") do
+                    task.wait(0.5)
+                end
+                
+                local success = doOneCycle()
+                if success then successCount = successCount + 1 end
+                task.wait(1)
+            end
+            
+            -- По окончании 3 циклов останавливаем
+            isFarming = false
+            Button.Text = "START FARM"
+            Button.TextColor3 = Color3.fromRGB(0, 255, 0)
+        end)
+    end
 end)
 
-print("[+] INTEL TEST (Wait for Blue) Loaded.")
+print("[+] INTEL TEST (Timer TP) Loaded.")
