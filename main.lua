@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (Safe Zone + Platform)
+-- INTEL TEST - Auto Farm (Safe Zone + Floor)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -9,18 +9,18 @@ local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- ==========================================
--- НАСТРОЙКИ СЕЙФ-ЗОНЫ
+-- НАСТРОЙКИ
 -- ==========================================
 local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
 local platform = nil
 
 -- Создаем невидимый пол
-local function createPlatform()
+local function createFloor()
     if platform and platform.Parent then return end
     platform = Instance.new("Part")
-    platform.Name = "AutoFarmSafePlatform"
+    platform.Name = "SafeZoneFloor"
     platform.Size = Vector3.new(20, 1, 20) 
-    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Чуть ниже, чтобы встать на него
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Пол ровно под ногами
     platform.Anchored = true
     platform.CanCollide = true
     platform.Transparency = 1 -- Невидимый
@@ -63,8 +63,7 @@ local function doOneCycle()
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
     task.wait(1)
     
-    -- 3. ТП на безопасную платформу
-    createPlatform()
+    -- 3. ТП в сейф-зону
     teleportTo(SAFE_ZONE_POS)
     task.wait(0.5)
     
@@ -88,7 +87,7 @@ MainTab:CreateButton({
     Name = "Start Auto Farm (3 Cycles)",
     Callback = function()
         task.spawn(function()
-            createPlatform() -- Создаем пол сразу при нажатии
+            createFloor() -- Создаем пол перед стартом
             local successCount = 0
             
             for i = 1, 3 do
@@ -108,4 +107,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST Loaded (Safe Zone + Platform).")
+print("[+] INTEL TEST Loaded (Safe Zone + Invisible Floor).")
