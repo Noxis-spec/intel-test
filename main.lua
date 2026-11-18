@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (Safe Platform + Noclip)
+-- INTEL TEST - Auto Farm (Safe Zone + Platform)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -7,26 +7,23 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
-local RunService = game:GetService("RunService")
 
 -- ==========================================
--- НАСТРОЙКИ СЕЙФ-ЗОНЫ (Твои координаты)
+-- НАСТРОЙКИ СЕЙФ-ЗОНЫ
 -- ==========================================
 local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
-local noclipEnabled = false
 local platform = nil
 
--- Создаем платформу в воздухе (чтобы было на что встать)
+-- Создаем невидимый пол
 local function createPlatform()
     if platform and platform.Parent then return end
     platform = Instance.new("Part")
     platform.Name = "AutoFarmSafePlatform"
-    platform.Size = Vector3.new(20, 1, 20) -- 20х20 юнитов, чтобы точно не упасть
-    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Чуть ниже точки ТП
+    platform.Size = Vector3.new(20, 1, 20) 
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Чуть ниже, чтобы встать на него
     platform.Anchored = true
     platform.CanCollide = true
-    platform.Transparency = 1 -- Невидимая (или поставь 0, если хочешь видеть)
-    platform.Material = Enum.Material.SmoothPlastic
+    platform.Transparency = 1 -- Невидимый
     platform.Parent = Workspace
 end
 
@@ -49,27 +46,7 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
--- ==========================================
--- ЛОГИКА NOCLIP (Прохождение сквозь стены)
--- ==========================================
-local function toggleNoclip(state)
-    noclipEnabled = state
-    if state then
-        RunService.Stepped:Connect(function()
-            if noclipEnabled and LocalPlayer.Character then
-                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-    end
-end
-
--- ==========================================
--- ФУНКЦИЯ ОДНОГО ЦИКЛА
--- ==========================================
+-- Функция одного цикла
 local function doOneCycle()
     local blueIntel = getBriefcase("Blue")
     local redIntel = getBriefcase("Red")
@@ -84,10 +61,10 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1) -- Ждем сдачи
+    task.wait(1)
     
     -- 3. ТП на безопасную платформу
-    createPlatform() -- Создаем платформу (если ее еще нет)
+    createPlatform()
     teleportTo(SAFE_ZONE_POS)
     task.wait(0.5)
     
@@ -107,23 +84,11 @@ local Window = Rayfield:CreateWindow({
 
 local MainTab = Window:CreateTab("Main", 4483362458)
 
-MainTab:CreateToggle({
-    Name = "Enable Noclip (Fly through walls)",
-    CurrentValue = false,
-    Flag = "Noclip",
-    Callback = function(state)
-        toggleNoclip(state)
-        if state then
-            Rayfield:Notify({ Title = "Noclip", Content = "Noclip Enabled", Duration = 2 })
-        end
-    end,
-})
-
 MainTab:CreateButton({
     Name = "Start Auto Farm (3 Cycles)",
     Callback = function()
         task.spawn(function()
-            createPlatform() -- Создаем платформу сразу при запуске
+            createPlatform() -- Создаем пол сразу при нажатии
             local successCount = 0
             
             for i = 1, 3 do
@@ -143,4 +108,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST Loaded (Safe Platform + Noclip).")
+print("[+] INTEL TEST Loaded (Safe Zone + Platform).")
