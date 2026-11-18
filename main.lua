@@ -11,7 +11,21 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 -- ==========================================
 -- НАСТРОЙКИ
 -- ==========================================
-local SAFE_ZONE_POS = Vector3.new(-145.08, 910.79, 20.61) -- Твоя сейф-зона
+local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69) -- Твоя сейф-зона
+local platform = nil
+
+-- Создаем невидимый пол
+local function createFloor()
+    if platform and platform.Parent then return end
+    platform = Instance.new("Part")
+    platform.Name = "SafeZoneFloor"
+    platform.Size = Vector3.new(20, 1, 20) 
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Пол ровно под ногами
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Transparency = 1 -- Невидимый
+    platform.Parent = Workspace
+end
 
 local function teleportTo(pos)
     local char = LocalPlayer.Character
@@ -73,6 +87,8 @@ MainTab:CreateButton({
     Name = "Start Auto Farm (3 Cycles)",
     Callback = function()
         task.spawn(function()
+            createFloor() -- Создаем пол перед стартом цикла
+            
             local successCount = 0
             for i = 1, 3 do
                 Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
@@ -95,4 +111,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST (Safe Zone added) Loaded.")
+print("[+] INTEL TEST (Safe Zone + Floor) Loaded.")
