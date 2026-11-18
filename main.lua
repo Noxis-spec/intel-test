@@ -1,29 +1,28 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (3 Cycles) with GUI
+-- INTEL TEST - Simple Button (No Library)
 -- ==========================================
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local CoreGui = game:GetService("CoreGui")
 
 -- ==========================================
 -- НАСТРОЙКИ
 -- ==========================================
-local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69) -- Твоя сейф-зона
+local SAFE_ZONE_POS = Vector3.new(588.46, 769.85, 144.69)
 local platform = nil
 
--- Создаем невидимый пол
 local function createFloor()
     if platform and platform.Parent then return end
     platform = Instance.new("Part")
     platform.Name = "SafeZoneFloor"
     platform.Size = Vector3.new(20, 1, 20) 
-    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0) -- Пол ровно под ногами
+    platform.Position = SAFE_ZONE_POS - Vector3.new(0, 3, 0)
     platform.Anchored = true
     platform.CanCollide = true
-    platform.Transparency = 1 -- Невидимый
+    platform.Transparency = 1
     platform.Parent = Workspace
 end
 
@@ -46,69 +45,65 @@ local function pressE()
     VirtualInputManager:SendKeyEvent(false, "E", false, game)
 end
 
--- Функция одного цикла
 local function doOneCycle()
     local blueIntel = getBriefcase("Blue")
     local redIntel = getBriefcase("Red")
-    
     if not blueIntel or not redIntel then return false end
 
-    -- 1. ТП к Синему (падаем на него)
     teleportTo(blueIntel.Position + Vector3.new(0, 5, 0))
     task.wait(0.6)
     pressE()
     task.wait(0.4)
     
-    -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1) -- Ждем 1 секунду для регистрации сдачи
+    task.wait(1)
     
-    -- 3. ТП в безопасную зону
     teleportTo(SAFE_ZONE_POS)
     task.wait(0.5)
-    
     return true
 end
 
 -- ==========================================
--- UI (Rayfield)
+-- ПРОСТОЕ МЕНЮ
 -- ==========================================
-local Window = Rayfield:CreateWindow({
-    Name = "INTEL TEST",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "by Noxis",
-    ConfigurationSaving = { Enabled = true, FolderName = "IntelTest", FileName = "Config" },
-    KeySystem = false
-})
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "IntelMenu"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
-local MainTab = Window:CreateTab("Main", 4483362458)
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0, 150, 0, 50)
+Button.Position = UDim2.new(0, 20, 0, 100)
+Button.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Button.Text = "START FARM"
+Button.TextColor3 = Color3.fromRGB(0, 255, 0)
+Button.Font = Enum.Font.GothamBold
+Button.TextSize = 16
+Button.Parent = ScreenGui
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
 
-MainTab:CreateButton({
-    Name = "Start Auto Farm (3 Cycles)",
-    Callback = function()
-        task.spawn(function()
-            createFloor() -- Создаем пол перед стартом
-            
-            local successCount = 0
-            for i = 1, 3 do
-                Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
-                
-                -- Ждем, пока появится синий кейс
-                while not getBriefcase("Blue") do
-                    task.wait(0.5)
-                end
-                
-                local success = doOneCycle()
-                if success then
-                    successCount = successCount + 1
-                end
-                
-                task.wait(1)
+Button.MouseButton1Click:Connect(function()
+    Button.Text = "WORKING..."
+    Button.TextColor3 = Color3.fromRGB(255, 200, 0)
+    
+    task.spawn(function()
+        createFloor()
+        local successCount = 0
+        
+        for i = 1, 3 do
+            while not getBriefcase("Blue") do
+                task.wait(0.5)
             end
             
-            Rayfield:Notify({ Title = "Auto Farm", Content = "Finished " .. successCount .. "/3 cycles!", Duration = 3 })
-        end)
-    end,
-})
+            local success = doOneCycle()
+            if success then successCount = successCount + 1 end
+            task.wait(1)
+        end
+        
+        Button.Text = "START FARM"
+        Button.TextColor3 = Color3.fromRGB(0, 255, 0)
+    end)
+end)
 
-print("[+] INTEL TEST (Safe Zone + Floor) Loaded.")
+print("[+] INTEL TEST (Simple Button) Loaded.")
