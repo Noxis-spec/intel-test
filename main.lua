@@ -1,5 +1,5 @@
 -- ==========================================
--- INTEL TEST - Auto Farm (Map Specific Safe Zones)
+-- INTEL TEST - Auto Farm (Smart Map Detection)
 -- ==========================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -14,7 +14,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local SAFE_ZONES = {
     -- Doublecross (День и Ночь)
     ["ctf_doublecrossday"] = Vector3.new(-145.08, 910.79, 20.61),
-    ["ctf_doublecross"] = Vector3.new(-145.08, 910.79, 20.61), -- Ночная версия
+    ["ctf_doublecross"] = Vector3.new(-145.08, 910.79, 20.61),
     
     -- 2Fort (Обычный, Ночь, Разрушенный)
     ["ctf_2fort"] = Vector3.new(91.76, 60.05, 36.07),
@@ -22,9 +22,12 @@ local SAFE_ZONES = {
     ["ctf_wartorn2fort"] = Vector3.new(91.76, 60.05, 36.07),
 }
 
--- Функция определения текущей карты
+-- ==========================================
+-- УМНОЕ ОПРЕДЕЛЕНИЕ КАРТЫ
+-- ==========================================
 local function getCurrentMapName()
-    for _, obj in ipairs(Workspace:GetChildren()) do
+    -- Сканируем ВСЁ, что есть в Workspace, чтобы найти название карты
+    for _, obj in ipairs(Workspace:GetDescendants()) do
         local name = obj.Name:lower()
         if name:find("ctf_") or name:find("pl_") or name:find("cp_") or name:find("koth_") then
             return obj.Name 
@@ -67,7 +70,7 @@ local function doOneCycle()
     
     -- 2. ТП к Красному (сдача)
     teleportTo(redIntel.Position + Vector3.new(0, 2, 0))
-    task.wait(1) -- Ждем регистрации сдачи
+    task.wait(1)
     
     -- 3. ТП в безопасную зону
     local currentMap = getCurrentMapName()
@@ -104,7 +107,8 @@ MainTab:CreateButton({
             local successCount = 0
             local currentMap = getCurrentMapName()
             
-            Rayfield:Notify({ Title = "Map Detected", Content = currentMap, Duration = 3 })
+            -- Показываем, какую карту нашел скрипт
+            Rayfield:Notify({ Title = "Map Detected", Content = currentMap, Duration = 5 })
 
             for i = 1, 3 do
                 Rayfield:Notify({ Title = "Auto Farm", Content = "Cycle " .. i .. " started...", Duration = 2 })
@@ -123,4 +127,4 @@ MainTab:CreateButton({
     end,
 })
 
-print("[+] INTEL TEST Loaded. All CTF maps are supported.")
+print("[+] INTEL TEST Loaded. Map detection is now aggressive.")
